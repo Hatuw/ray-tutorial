@@ -18,25 +18,24 @@ def map_serial(function, xs):
 Exercise 1
 """
 # parallel map
-def map_parallel(function, xs):
+def map_parallel(func, xs):
     """Apply a remote function to each element of a list."""
     if not isinstance(xs, list):
         raise ValueError('The xs argument must be a list.')
 
-    if not hasattr(function, 'remote'):
+    if not hasattr(func, 'remote'):
         raise ValueError('The function argument must be a remote function.')
 
-    # return [function(x) for x in xs]
-    return [function.remote(x) for x in xs]
+    return [func.remote(x) for x in xs]
 
 
 def increment_regular(x):
-    return x + 1
+    return x ** 2
 
 
 @ray.remote
 def increment_remote(x):
-    return x + 1
+    return x ** 2
 
 xs = [i for i in range(1, 6)]  # 1, 2, ..., 5
 result_ids = map_parallel(increment_remote, xs)
@@ -82,13 +81,13 @@ results_parallel = ray.get(result_ids)
 assert results_parallel == results_serial
 
 
-def reduce_serial(function, xs):
+def reduce_serial(func, xs):
     if len(xs) == 1:
         return xs[0]
 
     result = xs[0]
     for i in range(1, len(xs)):
-        result = function(result, xs[i])
+        result = func(result, xs[i])
 
     return result
 
@@ -102,11 +101,11 @@ assert reduce_serial(add_regular, [1, 2, 3, 4, 5, 6, 7, 8]) == 36
 """
 Exercise 3
 """
-def reduce_parallel(function, xs):
+def reduce_parallel(func, xs):
     if not isinstance(xs, list):
         raise ValueError('The xs argument must be as list.')
     
-    if not hasattr(function, 'remote'):
+    if not hasattr(func, 'remote'):
         raise ValueError('The function argument must be a remote function.')
 
     if len(xs) == 1:
@@ -114,7 +113,7 @@ def reduce_parallel(function, xs):
     
     result = xs[0]
     for i in range(1, len(xs)):
-        result = function(result, xs[i])
+        result = func(result, xs[i])
 
     return result
 
