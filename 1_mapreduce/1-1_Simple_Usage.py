@@ -66,7 +66,11 @@ def my_MapReduce():
 
     # map serial
     # [0, 1, 2, 3, 4] --> [0, 1, 4, 9, 16]
-    map_serial_res = map(lambda x: x ** 2, range(5))
+    def square_local(x):
+        time.sleep(1)
+        return x ** 2
+    # map_serial_res = map(lambda x: x ** 2, range(5))
+    map_serial_res = map(square_local, range(5))
 
     # In Python3.x, map func will return a iterator
     if py_version == '3':
@@ -82,9 +86,14 @@ def my_MapReduce():
     else:
         global reduce
 
-    reduce_serial_res = reduce(lambda x, y: x + y, map_serial_res)
+    def sum_local(x, y):
+        time.sleep(1)
+        return x + y
 
-    print("Serial Reduce result: {}".format(reduce_serial_res))
+    # reduce_serial_res = reduce(lambda x, y: x + y, map_serial_res)
+    reduce_serial_res = reduce(sum_local, map_serial_res)
+
+    print("Serial Reduce result: {}\n".format(reduce_serial_res))
 
     # ========================================
 
@@ -93,28 +102,32 @@ def my_MapReduce():
     
     @ray.remote
     def square_remote(x):
+        time.sleep(1)
         return x ** 2
 
     map_parallel_res = ray.get(map_parallel(square_remote, range(5)))
     print("Parallel Map result: {}".format(map_parallel_res))
 
 
-    # reduce parallel
     def reduce_parallel(func, xs):
-        if len(xs) == 1:
-            return xs[0]
+        len_xs = len(xs)
+        if len_xs == 1:
+            return xs[0] 
+        elif len_xs == 2:
+            return ray.get(func.remote(xs[0], xs[1]))
 
-        result = xs[0]
-        for i in range(1, len(xs)):
-            # notice: func must be a remote function
-            result = func.remote(result, xs[i])
+        x_left = xs[:(len_xs // 2)]
+        x_right = xs[(len_xs // 2):]
+        
+        result = reduce_parallel(func, x_left) + reduce_parallel(func, x_right)
         return result
 
     @ray.remote
     def sum_remote(x, y):
+        time.sleep(1)
         return x + y
 
-    reduce_parallel_res = ray.get(reduce_parallel(sum_remote, map_parallel_res))
+    reduce_parallel_res = reduce_parallel(sum_remote, map_parallel_res)
     print("Parallel Reduce result: {}".format(reduce_parallel_res))
     
 
