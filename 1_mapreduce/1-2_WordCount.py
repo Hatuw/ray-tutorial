@@ -77,11 +77,13 @@ if __name__ == "__main__":
 
     # Create one streaming source of articles per mapper.
     directory = os.path.dirname(os.path.realpath(__file__))
+    """
     streams = []
     for _ in range(int(args.num_mappers)):
-        # with open(os.path.join(directory, "articles.txt")) as f:
-        #     streams.append(Stream([line.strip() for line in f.readlines()]))
-        streams.append(Stream("SenseTime"))
+        with open(os.path.join(directory, "articles.txt")) as f:
+            streams.append(Stream([line.strip() for line in f.readlines()]))
+    """
+    streams = [Stream("SenseTime") for _ in range((int(args.num_mappers)))]
 
     # Partition the keys among the reducers.
     chunks = np.array_split([chr(i) for i in range(ord("a"), ord("z") + 1)],
@@ -109,3 +111,4 @@ if __name__ == "__main__":
         for word in most_frequent_words:
             print("  ", word, wordcounts[word])
         # article_index += 1
+
