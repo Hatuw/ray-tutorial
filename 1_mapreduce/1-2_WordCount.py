@@ -4,6 +4,7 @@ import argparse
 from collections import Counter, defaultdict
 import heapq
 import numpy as np
+import re
 import os
 import ray
 import wikipedia
@@ -27,7 +28,7 @@ class Mapper(object):
         # Get the next wikipedia article.
         article = wikipedia.page(self.title_stream.next()).content
         # Count the words and store the result.
-        self.word_counts.append(Counter(article.split(" ")))
+        self.word_counts.append(Counter(re.split(r" |\n", article)))
         self.num_articles_processed += 1
 
     def get_range(self, article_index, keys):
@@ -75,15 +76,9 @@ if __name__ == "__main__":
         ignore_reinit_error=True
         )
 
-    # Create one streaming source of articles per mapper.
-    directory = os.path.dirname(os.path.realpath(__file__))
-    """
-    streams = []
-    for _ in range(int(args.num_mappers)):
-        with open(os.path.join(directory, "articles.txt")) as f:
-            streams.append(Stream([line.strip() for line in f.readlines()]))
-    """
-    streams = [Stream("SenseTime") for _ in range((int(args.num_mappers)))]
+    kw_list = ["SenseTime", "AI", "MapReduce"]
+    # Create ${args.num_mappers} stream(s)
+    streams = [Stream(kw_list) for _ in range((int(args.num_mappers)))]
 
     # Partition the keys among the reducers.
     chunks = np.array_split([chr(i) for i in range(ord("a"), ord("z") + 1)],
@@ -97,8 +92,7 @@ if __name__ == "__main__":
     # keys. This gives each Reducer actor a handle to each Mapper actor.
     reducers = [Reducer.remote(key, *mappers) for key in keys]
 
-    # article_index = 0
-    # while True:
+    # Map & Reduce
     for article_index in range(10):
         print("article index = {}".format(article_index))
         wordcounts = {}
@@ -106,9 +100,10 @@ if __name__ == "__main__":
                           for reducer in reducers])
         for count in counts:
             wordcounts.update(count)
+        
+        # get most 10 frequent words
         most_frequent_words = heapq.nlargest(10, wordcounts,
                                              key=wordcounts.get)
         for word in most_frequent_words:
             print("  ", word, wordcounts[word])
-        # article_index += 1
 
